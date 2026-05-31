@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 360" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" role="img" aria-label="The agent loop">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#7c9bff"/>
+    </marker>
+    <marker id="arrowT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#5eead8"/>
+    </marker>
+  </defs>
+  <rect x="1" y="1" width="858" height="358" rx="16" fill="#0f1620" stroke="#243042"/>
+  <text x="28" y="40" fill="#e6edf5" font-size="19" font-weight="700">The agent loop</text>
+  <text x="28" y="62" fill="#8b97a7" font-size="13">A loop around a stateless model that lets it act.</text>
+
+  <!-- Goal -->
+  <rect x="28" y="150" width="120" height="60" rx="10" fill="#161c25" stroke="#2f3a49"/>
+  <text x="88" y="186" fill="#e6edf5" font-size="15" text-anchor="middle">Goal</text>
+
+  <!-- Model -->
+  <rect x="220" y="135" width="200" height="90" rx="12" fill="#13202b" stroke="#2c5c57"/>
+  <text x="320" y="170" fill="#5eead8" font-size="15" font-weight="700" text-anchor="middle">Model decides</text>
+  <text x="320" y="194" fill="#9fb0c0" font-size="12.5" text-anchor="middle">answer, or call a tool?</text>
+
+  <!-- Tools -->
+  <rect x="490" y="40" width="200" height="80" rx="12" fill="#161c25" stroke="#3a4a3f"/>
+  <text x="590" y="72" fill="#e6edf5" font-size="15" font-weight="700" text-anchor="middle">Your code runs</text>
+  <text x="590" y="94" fill="#9fb0c0" font-size="12.5" text-anchor="middle">the tool, returns a result</text>
+
+  <!-- Answer -->
+  <rect x="710" y="150" width="120" height="60" rx="10" fill="#161c25" stroke="#2f3a49"/>
+  <text x="770" y="180" fill="#e6edf5" font-size="15" text-anchor="middle">Final</text>
+  <text x="770" y="198" fill="#e6edf5" font-size="15" text-anchor="middle">answer</text>
+
+  <!-- arrows -->
+  <line x1="148" y1="180" x2="214" y2="180" stroke="#7c9bff" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- model -> tool (up-right) -->
+  <path d="M420 160 C 470 140, 470 110, 488 95" fill="none" stroke="#5eead8" stroke-width="2" marker-end="url(#arrowT)"/>
+  <text x="450" y="120" fill="#5eead8" font-size="12">tool call</text>
+  <!-- tool -> back to model (result) -->
+  <path d="M520 120 C 470 180, 440 190, 422 200" fill="none" stroke="#5eead8" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowT)"/>
+  <text x="500" y="205" fill="#5eead8" font-size="12">result feeds back</text>
+  <!-- model -> answer -->
+  <line x1="420" y1="195" x2="704" y2="190" stroke="#7c9bff" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="560" y="183" fill="#9fb0c0" font-size="12">done</text>
+
+  <text x="320" y="300" fill="#6b7888" font-size="12.5" text-anchor="middle">Repeat until the model stops asking for tools. A max-iterations cap keeps it from looping forever.</text>
+</svg>

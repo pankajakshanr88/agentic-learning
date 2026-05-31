@@ -1,10 +1,9 @@
 """
-Day 2 · Lesson 07 (OPS) — Tracing: making the black box observable
+Day 2 · Lesson 07 (ops) — Tracing: seeing into the black box
 
-THIS IS YOUR HOME TURF.
-An agent without tracing is an unobservable distributed system. You already know the
-fix: structured logs + spans + metrics. Here we instrument every step of the agent loop
-with exactly that — prompt, tool I/O, tokens, cost, latency.
+An agent with no tracing is an unobservable distributed system, and you already know the
+fix: structured logs, spans, metrics. Here we instrument every step of the loop with
+exactly that: the prompt, tool I/O, tokens, cost, and latency.
 
 CONCEPT
 -------

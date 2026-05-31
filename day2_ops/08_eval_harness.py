@@ -1,7 +1,7 @@
 """
-Day 2 · Lesson 08 (OPS) — Evals: tests for a non-deterministic system
+Day 2 · Lesson 08 (ops) — Evals: tests for a system that isn't deterministic
 
-THE MOST IMPORTANT OPS LESSON. This is where your CI/CD instinct becomes your edge.
+This is the lesson where your CI instinct does the most work.
 
 THE PROBLEM
 -----------

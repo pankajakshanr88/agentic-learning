@@ -1,9 +1,9 @@
 """
-Day 2 · Lesson 09 (OPS) — Guardrails: reliability & safety for agents
+Day 2 · Lesson 09 (ops) — Guardrails: reliability and safety for agents
 
-Most of this you ALREADY do for services — it's input validation, allow-lists,
-timeouts, retries, and circuit breakers, applied to an LLM. Plus one genuinely new
-attack class: prompt injection.
+Most of this you already do for services: input validation, allow-lists, timeouts,
+retries, circuit breakers, now applied to an LLM. Plus one new class of attack you
+haven't had to think about before: prompt injection.
 
 GUARDRAILS COVERED
 ------------------

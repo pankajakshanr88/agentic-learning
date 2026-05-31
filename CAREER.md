@@ -1,61 +1,68 @@
-# From DevOps to Agentic Engineering — the pivot roadmap
+# From DevOps to agentic engineering
 
-The weekend gets you literacy + three agents. This is the rest of the path. The thesis:
-**don't compete with ML researchers on modeling — own the operational layer of agents**,
-where your DevOps experience is a moat and demand is high.
+![Network cabling in a data center](vendor/img/datacenter.jpg)
 
-## The roles you're aiming at
+The weekend gets you literacy and three small agents. This is the path after it.
 
-| Title | What it is | How much you already have |
-|---|---|---|
-| **LLMOps / AI Platform Engineer** | CI/CD, deploy, monitor, eval, cost-control for LLM apps | ~70% — it's DevOps + LLM specifics |
-| **Agent Infrastructure Engineer** | Build the runtime/tooling/MCP servers agents run on | ~60% — systems + new protocols |
-| **AI/Agent Engineer (product)** | Design & ship agent features | ~40% — needs more prompt/agent design |
-| **ML Platform / Reliability** | Serving, GPUs, throughput, SLOs for AI | ~65% — your infra skills transfer |
+The idea behind the path: don't try to out-research the ML researchers. Own the operational
+layer of agents instead, the part that's closest to what you already do, and the part teams
+are short on. That's where your experience counts double and the roles are easiest to win.
 
-Pick the first two as targets; they're the least crowded and most you-shaped.
+## The roles to aim at
 
-## The gap list (what to learn after the weekend)
+| Role | What it is | How much you already have |
+|------|------------|----------------------------|
+| LLMOps / AI platform engineer | CI/CD, deploy, monitor, eval, and cost-control for LLM apps | Most of it. It's DevOps plus a few LLM specifics |
+| Agent infrastructure engineer | Build the runtime, tooling, and MCP servers agents run on | A lot. Systems work plus new protocols |
+| AI / agent engineer (product) | Design and ship agent features | Some. You'd add prompt and agent design |
+| ML platform / reliability | Serving, GPUs, throughput, SLOs for AI | A lot. Your infra skills carry over |
 
-Ranked by leverage for someone with your background:
+Aim at the first two. They're the least crowded and the most shaped like you.
 
-1. **Evals at scale** — datasets, scoring (LLM-as-judge, rubrics), regression suites,
-   eval-in-CI gating deploys. *(Your CI/CD instinct is the whole game here.)*
-2. **Observability/tracing for agents** — LangSmith / Langfuse / Phoenix; spans per step,
-   token & cost dashboards, latency SLOs.
-3. **RAG + vector DBs** — embeddings, chunking, retrieval quality, the data pipeline around
-   it. The most common "agent" in industry is RAG.
-4. **Agent security** — prompt injection, tool sandboxing, least-privilege tool access,
-   secrets, output filtering. (OWASP LLM Top 10.) *Maps directly to your IAM/sec work.*
-5. **MCP server authoring & hosting** — build and operate tool servers. A clean specialty.
-6. **Frameworks fluency** — LangGraph + Claude Agent SDK deep, enough OpenAI SDK to be
-   bilingual.
-7. **Cost & performance engineering** — caching, model routing, batching, smaller models
-   where they suffice.
-8. **Deployment patterns** — streaming endpoints, queues for long agent runs, rollback of
-   prompts/models like you'd roll back a release.
+## What to learn after the weekend
 
-## Portfolio ladder (build these, in order)
+Roughly in order of payoff for your background:
 
-Each should be public, with a README, tests/evals, tracing, and a Dockerfile — i.e., it
-should *look operated*, because that's your differentiator.
+1. **Evals at scale.** Datasets, scoring (LLM-as-judge, rubrics), regression suites, and
+   gating deploys on them. Your CI instinct is the whole game here.
 
-1. **The capstone** (this weekend) — a small ops agent with an eval + trace + Docker.
-2. **A RAG agent over real docs** (e.g., your team's runbooks) with a retrieval eval suite.
-3. **An MCP server** exposing a real tool (e.g., a cloud API), plus an agent that uses it.
-4. **An "agent platform" mini-project** — deploy an agent with CI-gated evals, a Langfuse/
-   LangSmith trace dashboard, cost alerts, and rollback. *This is the portfolio centerpiece;
-   it's literally the job.*
+![Evals as a CI gate: a prompt change runs the eval suite, and the score decides whether it ships or the build fails](vendor/img/eval-ci.svg)
+2. **Tracing for agents.** LangSmith, Langfuse, or Phoenix: a span per step, token and cost
+   dashboards, latency SLOs.
+3. **RAG and vector DBs.** Embeddings, chunking, retrieval quality, the data pipeline around
+   it. The most common "agent" in industry is really RAG.
+4. **Agent security.** Prompt injection, tool sandboxing, least-privilege tool access,
+   secrets, output filtering. This maps straight onto your IAM and security work.
+5. **MCP servers.** Build and operate tool servers. A clean specialty to own.
+6. **Frameworks.** LangGraph and the Claude Agent SDK in depth, enough OpenAI SDK to read it.
+7. **Cost and performance.** Caching, model routing, batching, smaller models where they do.
+8. **Deployment patterns.** Streaming endpoints, queues for long runs, rolling back prompts
+   and models the way you roll back a release.
 
-## Rough cadence (8–12 weeks, ~6–8 hrs/week post-weekend)
+## Projects to build, in order
 
-- **Weeks 1–2:** Solidify foundations + prompt/agent design (Anthropic docs, Cookbook).
-- **Weeks 3–4:** Evals — build project #2's eval suite; learn LLM-as-judge.
-- **Weeks 5–6:** RAG + vector DBs — finish project #2.
-- **Weeks 7–8:** MCP — build project #3.
-- **Weeks 9–12:** The platform project (#4) + security hardening; write up each project.
+Make each one public, with a README, evals, tracing, and a Dockerfile. The operational layer
+is the part that proves you, so show it.
 
-## Signal you can show in interviews
-- "I treat prompts/models as artifacts: versioned, eval-gated in CI, traced in prod, with
-  cost alerts and rollback." — That sentence, *demonstrated*, gets you the LLMOps job.
-- Talk in failure modes and SLOs, not just demos. That's the senior signal.
+1. The capstone from this weekend: a small agent with a trace, an eval, and a Dockerfile.
+2. A RAG agent over real docs (your team's runbooks work well), with a retrieval eval suite.
+3. An MCP server that exposes a real tool, say a cloud API, plus an agent that uses it.
+4. A small agent platform: an agent deployed with CI-gated evals, a trace dashboard, cost
+   alerts, and rollback. This one is close to the actual job, so it's the centerpiece.
+
+## A rough cadence
+
+About 8 to 12 weeks at 6 to 8 hours a week:
+
+- Weeks 1–2: firm up the basics and prompt/agent design (Anthropic docs and Cookbook).
+- Weeks 3–4: evals. Build project 2's eval suite and learn LLM-as-judge.
+- Weeks 5–6: RAG and vector DBs. Finish project 2.
+- Weeks 7–8: MCP. Build project 3.
+- Weeks 9–12: the platform project, plus security hardening, and write each project up.
+
+## What to say in interviews
+
+The line that lands, once you can show it: "I treat prompts and models as artifacts.
+Versioned, eval-gated in CI, traced in prod, with cost alerts and rollback." Then point at
+the platform project that does exactly that. Talk in failure modes and SLOs, not demos.
+That's the senior signal, and it's already how you think.

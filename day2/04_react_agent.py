@@ -1,10 +1,10 @@
 """
-Day 2 · Lesson 04 — ReAct: reasoning + acting with multiple tools
+Day 2 · Lesson 04 — ReAct: reasoning and acting with multiple tools
 
 CONCEPT
 -------
-ReAct = "Reason + Act". It's not a new mechanism — it's the SAME loop from Lesson 03,
-with two upgrades:
+ReAct means "reason, then act." It isn't a new mechanism. It's the same loop from
+Lesson 03 with two upgrades:
   1. Several tools, so the model must CHOOSE which to use (good tool descriptions
      matter — they're API docs the model reads).
   2. We encourage the model to reason out loud before acting, which improves its

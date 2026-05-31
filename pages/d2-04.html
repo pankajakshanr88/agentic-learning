@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 · ReAct Agent · Agentic Engineering</title>
+<link id="hljs-dark" rel="stylesheet" href="../vendor/hljs-dark.css">
+<link id="hljs-light" rel="stylesheet" href="../vendor/hljs-light.css" disabled>
+<style>
+:root{
+  --bg:#0d1117; --panel:#11161d; --panel-2:#161c25; --border:#222b36;
+  --text:#d7dee8; --muted:#8b97a7; --heading:#f0f4f9;
+  --accent:#5eead8; --accent-2:#7c9bff; --accent-soft:rgba(94,234,216,.12);
+  --code-bg:#0b0f15; --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+html[data-theme="light"]{
+  --bg:#f6f8fb; --panel:#ffffff; --panel-2:#f0f3f8; --border:#e1e7ef;
+  --text:#283340; --muted:#5d6b7d; --heading:#0f1722;
+  --accent:#0d9488; --accent-2:#3b5bdb; --accent-soft:rgba(13,148,136,.10);
+  --code-bg:#f3f5f9; --shadow:0 10px 28px rgba(20,40,80,.10);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+code,pre,kbd{font-family:"SF Mono",SFMono-Regular,ui-monospace,Menlo,Consolas,monospace}
+#progress-top{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .1s linear}
+header{position:fixed;top:0;left:0;right:0;height:58px;z-index:50;display:flex;align-items:center;gap:14px;
+  padding:0 18px;background:color-mix(in srgb,var(--panel) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+header .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--heading)}
+header .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+header .spacer{flex:1}
+header .meta{color:var(--muted);font-size:13px}
+.iconbtn{cursor:pointer;border:1px solid var(--border);background:var(--panel-2);color:var(--text);
+  border-radius:9px;height:34px;min-width:34px;padding:0 10px;display:inline-flex;align-items:center;gap:7px;font-size:13px}
+.iconbtn:hover{border-color:var(--accent);color:var(--heading)}
+#menu-btn{display:none}
+.ring{display:flex;align-items:center;gap:8px}
+.ring svg{transform:rotate(-90deg)}
+.ring .bg{stroke:var(--border)}
+.ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .4s ease}
+.ring .pct{font-size:12px;color:var(--muted);min-width:34px;text-align:right}
+.layout{display:flex;padding-top:58px}
+nav#side{position:fixed;top:58px;bottom:0;width:286px;overflow-y:auto;border-right:1px solid var(--border);
+  background:var(--panel);padding:16px 10px 60px}
+nav#side .search{width:100%;margin:0 0 12px;padding:9px 11px;border-radius:9px;border:1px solid var(--border);
+  background:var(--panel-2);color:var(--text);font-size:13px}
+nav#side .search:focus{outline:none;border-color:var(--accent)}
+.navgroup{margin:14px 4px 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.navlink{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;color:var(--text);
+  text-decoration:none;font-size:14px;cursor:pointer;border:1px solid transparent}
+.navlink:hover{background:var(--panel-2)}
+.navlink.active{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 40%,transparent);color:var(--heading);font-weight:600}
+.navlink .chk{appearance:none;width:15px;height:15px;border:1.5px solid var(--border);border-radius:5px;cursor:pointer;flex:none;position:relative}
+.navlink .chk:checked{background:var(--accent);border-color:var(--accent)}
+.navlink .chk:checked::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #04221e;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.navlink .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navlink.kind-code .lbl::before{content:"›_ ";color:var(--accent);font-family:monospace}
+main{margin-left:286px;flex:1;min-width:0;padding:34px 7vw 140px}
+.doc-section{max-width:880px;margin:0 auto 56px;scroll-margin-top:78px}
+.doc-section+.doc-section{border-top:1px solid var(--border);padding-top:46px}
+.doc-section h1{font-size:31px;line-height:1.2;color:var(--heading);margin:.2em 0 .5em;letter-spacing:-.01em}
+.doc-section h2{font-size:22px;color:var(--heading);margin:1.6em 0 .5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+.doc-section h3{font-size:17px;color:var(--heading);margin:1.4em 0 .4em}
+.doc-section p{margin:.75em 0}
+.doc-section a{color:var(--accent-2);text-decoration:none;border-bottom:1px solid transparent}
+.doc-section a:hover{border-bottom-color:var(--accent-2)}
+.doc-section blockquote{margin:1em 0;padding:.6em 1em;border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:0 8px 8px 0}
+.doc-section ul,.doc-section ol{padding-left:1.4em}
+.doc-section li{margin:.3em 0}
+.doc-section img{max-width:100%;height:auto;border-radius:14px;margin:1.2em 0;display:block;
+  border:1px solid var(--border);box-shadow:var(--shadow)}
+.doc-section img[src$=".svg"]{box-shadow:none;border:none;background:none}
+.doc-section :not(pre)>code{background:var(--panel-2);border:1px solid var(--border);padding:.12em .42em;
+  border-radius:6px;font-size:.88em;color:var(--accent)}
+.doc-section table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:14px;display:block;overflow-x:auto}
+.doc-section th,.doc-section td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top}
+.doc-section th{background:var(--panel-2);color:var(--heading);font-weight:600}
+.doc-section tr:nth-child(even) td{background:color-mix(in srgb,var(--panel-2) 50%,transparent)}
+.doc-section hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.code-path{margin:-.2em 0 1em;color:var(--muted);font-size:13px}
+pre{position:relative;background:var(--code-bg)!important;border:1px solid var(--border);border-radius:12px;
+  padding:16px;overflow:auto;margin:1.1em 0;box-shadow:var(--shadow)}
+pre code{background:none!important;padding:0;font-size:13.5px;line-height:1.6}
+.copy-btn{position:absolute;top:9px;right:9px;border:1px solid var(--border);background:var(--panel);
+  color:var(--muted);border-radius:7px;padding:4px 9px;font-size:11.5px;cursor:pointer;opacity:0;transition:.15s}
+pre:hover .copy-btn{opacity:1}
+.copy-btn:hover{color:var(--heading);border-color:var(--accent)}
+.copy-btn.done{color:var(--accent);border-color:var(--accent)}
+details.codewrap{margin:1.1em 0}
+details.codewrap>summary{cursor:pointer;color:var(--accent-2);font-size:13px;margin-bottom:6px;list-style:none}
+details.codewrap>summary::-webkit-details-marker{display:none}
+details.codewrap>summary::before{content:"▸ "}
+details.codewrap[open]>summary::before{content:"▾ "}
+#top-btn{position:fixed;right:22px;bottom:22px;z-index:40;width:44px;height:44px;border-radius:50%;
+  border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer;font-size:18px;
+  box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s}
+#top-btn.show{opacity:1;pointer-events:auto}
+.pagenav{max-width:880px;margin:0 auto;display:flex;justify-content:space-between;gap:12px;padding-top:30px;border-top:1px solid var(--border)}
+.pagenav a{color:var(--accent-2);text-decoration:none;font-size:14px;border:1px solid var(--border);border-radius:9px;padding:10px 14px;max-width:48%}
+.pagenav a:hover{border-color:var(--accent)}
+.pagenav .dir{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+@media(max-width:920px){
+  #menu-btn{display:inline-flex}
+  nav#side{transform:translateX(-100%);transition:transform .25s;z-index:45;width:80%;max-width:320px;box-shadow:var(--shadow)}
+  body.nav-open nav#side{transform:none}
+  main{margin-left:0;padding:24px 20px 120px}
+  .scrim{display:none;position:fixed;inset:58px 0 0;background:rgba(0,0,0,.4);z-index:44}
+  body.nav-open .scrim{display:block}
+}
+</style>
+</head>
+<body>
+<header>
+  <button class="iconbtn" id="menu-btn" title="Menu">☰</button>
+  <div class="brand"><span class="dot"></span><a href="../index.html" style="color:inherit;text-decoration:none">Agentic Engineering</a></div>
+  <span class="meta">· Day 2 — Patterns</span>
+  <div class="spacer"></div>
+  <a class="iconbtn" href="../index.html" title="Single-page view">Single page</a>
+  <button class="iconbtn" id="theme-btn" title="Toggle theme">🌙</button>
+</header>
+<div class="scrim" id="scrim"></div>
+<div class="layout">
+  <nav id="side"><div id="navlist"><div class="navgroup">Guide</div><a class="navlink kind-md" href="overview.html"><span class="lbl">Overview</span></a><a class="navlink kind-md" href="setup.html"><span class="lbl">Setup</span></a><a class="navlink kind-md" href="walkthrough.html"><span class="lbl">Teaching Guide</span></a><div class="navgroup">Day 1</div><a class="navlink kind-code" href="d1-01.html"><span class="lbl">01 · Hello, LLM</span></a><a class="navlink kind-code" href="d1-02.html"><span class="lbl">02 · First Tool</span></a><a class="navlink kind-code" href="d1-03.html"><span class="lbl">03 · The Agent Loop</span></a><div class="navgroup">Day 2 — Patterns</div><a class="navlink kind-code" href="d2-04.html"><span class="lbl">04 · ReAct Agent</span></a><a class="navlink kind-code" href="d2-05.html"><span class="lbl">05 · Reflection</span></a><a class="navlink kind-code" href="d2-06.html"><span class="lbl">06 · Framework (SDK)</span></a><div class="navgroup">Day 2 — Ops</div><a class="navlink kind-code" href="ops-07.html"><span class="lbl">07 · Tracing</span></a><a class="navlink kind-code" href="ops-08.html"><span class="lbl">08 · Eval Harness</span></a><a class="navlink kind-code" href="ops-09.html"><span class="lbl">09 · Guardrails</span></a><a class="navlink kind-code" href="ops-docker.html"><span class="lbl">Dockerfile</span></a><a class="navlink kind-md" href="ops-run.html"><span class="lbl">Running in Production</span></a><div class="navgroup">Capstone</div><a class="navlink kind-md" href="capstone.html"><span class="lbl">Capstone</span></a><div class="navgroup">Reference</div><a class="navlink kind-md" href="glossary.html"><span class="lbl">Glossary</span></a><a class="navlink kind-md" href="resources.html"><span class="lbl">Resources</span></a><a class="navlink kind-md" href="career.html"><span class="lbl">Career Roadmap</span></a><a class="navlink kind-md" href="style.html"><span class="lbl">Writing Style</span></a></div></nav>
+  <main id="content"><section class="doc-section" id="thedoc"></section>
+    <div class="pagenav"><a href="d1-03.html"><span class="dir">← previous</span>03 · The Agent Loop</a><a href="d2-05.html" style="text-align:right"><span class="dir">next →</span>05 · Reflection</a></div>
+  </main>
+</div>
+<button id="top-btn" title="Back to top">↑</button>
+<script type="text/plain" id="src-doc">"""
+Day 2 · Lesson 04 — ReAct: reasoning and acting with multiple tools
+
+CONCEPT
+-------
+ReAct means "reason, then act." It isn't a new mechanism. It's the same loop from
+Lesson 03 with two upgrades:
+  1. Several tools, so the model must CHOOSE which to use (good tool descriptions
+     matter — they're API docs the model reads).
+  2. We encourage the model to reason out loud before acting, which improves its
+     tool choices.
+
+The agent now solves an open-ended task by deciding, step by step, what to do next.
+
+WHAT THIS PRINTS
+----------------
+  A trace where the model reasons, picks among a knowledge-base lookup, a calculator,
+  and a clock tool, and chains them to answer a question.
+
+RUN
+---
+  python day2/04_react_agent.py
+"""
+
+import os
+import sys
+from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
+if not os.getenv("ANTHROPIC_API_KEY"):
+    sys.exit("ANTHROPIC_API_KEY not set. See SETUP.md.")
+
+from anthropic import Anthropic
+
+client = Anthropic()
+MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+
+# A tiny fake "knowledge base" so the agent has a reason to look things up.
+KB = {
+    "server_count": 42,
+    "cost_per_server_monthly": 30,
+    "region": "us-east-1",
+}
+
+TOOLS = [
+    {
+        "name": "kb_lookup",
+        "description": "Look up an infrastructure fact by key. Keys: server_count, "
+        "cost_per_server_monthly, region.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string"}},
+            "required": ["key"],
+        },
+    },
+    {
+        "name": "calculator",
+        "description": "Evaluate an arithmetic expression.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"expression": {"type": "string"}},
+            "required": ["expression"],
+        },
+    },
+    {
+        "name": "current_time_utc",
+        "description": "Return the current UTC time as an ISO string. No arguments.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+]
+
+
+def run_tool(name, args):
+    if name == "kb_lookup":
+        return KB.get(args["key"], f"no such key: {args['key']}")
+    if name == "calculator":
+        return eval(args["expression"], {"__builtins__": {}}, {})
+    if name == "current_time_utc":
+        return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return f"unknown tool: {name}"
+
+
+SYSTEM = (
+    "You are an infrastructure assistant. Think briefly about which tool you need, then "
+    "use tools to get real numbers — never guess. When you have enough, give a final answer."
+)
+
+
+def agent(task, max_iterations=8):
+    messages = [{"role": "user", "content": task}]
+    for step in range(1, max_iterations + 1):
+        resp = client.messages.create(
+            model=MODEL, max_tokens=700, system=SYSTEM, tools=TOOLS, messages=messages
+        )
+        # Show the model's reasoning (text blocks), if any.
+        for block in resp.content:
+            if block.type == "text" and block.text.strip():
+                print(f"  [step {step}] thinking: {block.text.strip()}")
+
+        if resp.stop_reason != "tool_use":
+            return resp.content[-1].text if resp.content[-1].type == "text" else "(done)"
+
+        messages.append({"role": "assistant", "content": resp.content})
+        results = []
+        for block in resp.content:
+            if block.type == "tool_use":
+                out = run_tool(block.name, block.input)
+                print(f"  [step {step}] act: {block.name}({block.input}) -> {out}")
+                results.append(
+                    {"type": "tool_result", "tool_use_id": block.id, "content": str(out)}
+                )
+        messages.append({"role": "user", "content": results})
+    return "(stopped: hit max_iterations)"
+
+
+def main():
+    task = "What's our total monthly server cost, and what time is it in UTC right now?"
+    print("TASK:", task, "\n")
+    print("\nAGENT:", agent(task))
+
+
+if __name__ == "__main__":
+    main()
+
+
+# === Your turn ===============================================================
+# 1. Add a key 'discount_pct' = 10 to the KB and ask for cost AFTER discount. Watch
+#    it look up two facts and do the math.
+# 2. Worsen a tool's description (make it vague) and see tool choice get worse.
+#    Tool descriptions are prompt engineering — treat them like API docs.
+# 3. Ask something NONE of the tools can answer. Notice it should say so, not invent
+#    a number. (If it invents one — that's a hallucination; Lesson 08 catches these.)
+</script>
+<script src="../vendor/marked.min.js"></script>
+<script src="../vendor/hljs.min.js"></script>
+<script>
+const IT={"id":"d2-04","label":"04 \u00b7 ReAct Agent","group":"Day 2 \u2014 Patterns","kind":"code","path":"day2/04_react_agent.py","dir":"day2","lang":"python"}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
+
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const LS_THEME="agentic.theme";
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function normPath(dir,src){
+  if(/^https?:|^#|^data:/.test(src)) return src;
+  const parts=(dir?dir.split("/"):[]).concat(src.split("/")); const out=[];
+  for(const p of parts){ if(p===""||p===".") continue; if(p==="..") out.pop(); else out.push(p); }
+  return out.join("/");
+}
+// rewrite <img src> and inter-doc .md links inside a rendered section
+function fixLinks(el, dir, mode, byBase){
+  $$("img",el).forEach(img=>{
+    const root=normPath(dir, img.getAttribute("src")||"");
+    img.src = (mode==="page"?"../":"") + root;
+    img.loading="lazy";
+  });
+  $$("a",el).forEach(a=>{
+    let href=a.getAttribute("href")||"";
+    if(/^https?:|^mailto:/.test(href)) { a.target="_blank"; a.rel="noopener"; return; }
+    const hashOnly = href.startsWith("#");
+    if(hashOnly) return;
+    const m = href.replace(/#.*$/,"");
+    const base = m.split("/").pop();
+    const id = byBase[base];
+    if(id){ a.setAttribute("href", mode==="single" ? "#sec-"+id : id+".html"); }
+  });
+}
+function applyTheme(t){
+  document.documentElement.dataset.theme=t;
+  const tb=$("#theme-btn"); if(tb) tb.textContent = t==="dark"?"🌙":"☀️";
+  const sd=$("#hljs-dark"), sl=$("#hljs-light");
+  if(sd&&sd.sheet) sd.sheet.disabled = t!=="dark";
+  if(sl&&sl.sheet) sl.sheet.disabled = t==="dark";
+}
+function initTheme(){
+  applyTheme(localStorage.getItem(LS_THEME)||"dark");
+  const tb=$("#theme-btn");
+  if(tb) tb.addEventListener("click",()=>{
+    const t=document.documentElement.dataset.theme==="dark"?"light":"dark";
+    localStorage.setItem(LS_THEME,t); applyTheme(t);
+  });
+}
+function addCopyButtons(scope=document){
+  $$("pre",scope).forEach(pre=>{
+    if(pre.querySelector(".copy-btn")) return;
+    const b=document.createElement("button"); b.className="copy-btn"; b.textContent="Copy";
+    b.addEventListener("click",()=>{const c=pre.querySelector("code");
+      navigator.clipboard.writeText(c?c.innerText:pre.innerText);
+      b.textContent="Copied!"; b.classList.add("done");
+      setTimeout(()=>{b.textContent="Copy"; b.classList.remove("done")},1400);});
+    pre.appendChild(b);
+  });
+}
+function renderCode(it, raw){
+  return '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>'+
+    '<details class="codewrap" open><summary>source</summary>'+
+    '<pre><code class="language-'+it.lang+'">'+esc(raw)+'</code></pre></details>';
+}
+
+if(window.marked) marked.setOptions({gfm:true});
+const sec=$("#thedoc");
+const raw=document.getElementById("src-doc").textContent;
+sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw);
+fixLinks(sec, IT.dir, "page", BYBASE);
+if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
+addCopyButtons(); initTheme();
+$("#menu-btn").addEventListener("click",()=>document.body.classList.toggle("nav-open"));
+$("#scrim").addEventListener("click",()=>document.body.classList.remove("nav-open"));
+const top=$("#top-btn");
+addEventListener("scroll",()=>top.classList.toggle("show",document.documentElement.scrollTop>600));
+top.addEventListener("click",()=>scrollTo({top:0,behavior:"smooth"}));
+</script>
+</body>
+</html>

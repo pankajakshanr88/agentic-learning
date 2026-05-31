@@ -1,75 +1,75 @@
-# Agentic Engineering — A Weekend Intensive (for a Senior DevOps Engineer)
+![A neural network rendered as filaments of light](vendor/img/hero-ai.jpg)
 
-You already know how to ship, observe, and operate systems. This weekend you learn the one
-component you haven't operated yet: a **non-deterministic, tool-using LLM agent**. The good
-news — the *hard* part of production agents (deploy, trace, eval, guardrail, cost-control) is
-DevOps with the labels changed. You're closer to this job than almost anyone.
+# Agentic engineering, in a weekend
 
-> **Goal of the weekend:** go from "what is an agent" to *three working agents + an ops-grade
-> harness* you built and understand line-by-line. This is Phase 1 of a career pivot, not the
-> whole thing — see [CAREER.md](CAREER.md) for the road after.
+You operate systems for a living. This weekend you add one new piece to that skill set: an
+LLM that can use tools and act on its own. The model part is small. The part that makes
+agents actually work in production is deploys, monitoring, evals, rollbacks, and cost
+control, and you already do all of that for normal services.
+
+By the end of the weekend you'll have built three working agents and wrapped one in the
+operational layer that separates a demo from something you'd run on call. That's not a
+career on its own. It's the first real step, and [CAREER.md](CAREER.md) maps out the rest.
 
 ## Start here
 
-1. Read this page (5 min).
-2. Do [SETUP.md](SETUP.md) (5 min).
-3. Work the lessons in order. Each is a runnable file; the code is the lesson.
+1. Read this page. Five minutes.
+2. Do the [setup](SETUP.md). Another five.
+3. Work the lessons in order. Each one is a file you run; the code is the lesson.
 
-> **Prefer one rich page?** Double-click **`index.html`** — a self-contained, offline
-> single-page version of this whole repo with a sidebar, search, syntax-highlighted lessons,
-> dark/light toggle, copy buttons, and a progress tracker that remembers what you've done.
-> (No internet needed; regenerate after editing any doc with `python build_site.py`.)
+There's also a single rich page version of everything in this repo. Double-click
+`index.html` (or open it in a browser) for a sidebar, search, syntax-highlighted lessons, a
+dark/light toggle, and a progress tracker that remembers where you left off. Rebuild it after
+any edit with `python build_site.py`.
 
-## The mental model (read before Day 1)
+## The one idea everything is built on
 
-**An LLM is a stateless function:** text in → text out. No memory, no actions, just
-prediction. By itself it's a very smart autocomplete.
+An LLM on its own is a stateless function. Text goes in, text comes out. No memory, no
+internet, no ability to run code. On its own, it's a very good autocomplete.
 
-**An agent is a loop around that function** that lets it *act*:
+An agent is a loop around that function that lets it act:
 
-```
-            ┌──────────────────────────────────────────┐
-            │                                            │
-   goal ──▶ │  LLM decides: answer, or call a tool?      │
-            │      │                                     │
-            │      ├─ tool call ─▶ you run the tool ─────┤  (result fed back in)
-            │      │                                     │
-            │      └─ final answer ─▶ done               │
-            │                                            │
-            └──────────────────────────────────────────┘
-```
+![The agent loop: a goal goes in, the model decides whether to answer or call a tool, tool results feed back in, and the loop repeats until the model returns a final answer](vendor/img/agent-loop.svg)
 
-That's it. The whole field is variations on: *what tools, what loop, how much autonomy, and
-how do you keep it reliable.* Two terms you'll see everywhere (Anthropic's "Building Effective
-Agents" framing):
+That's the whole field. Everything else is a variation on four questions: what tools does it
+have, how does the loop run, how much does it get to decide, and how do you keep it from
+going off the rails.
 
-- **Workflow** — *you* hard-code the steps; the LLM fills in the blanks. Predictable.
-- **Agent** — the *LLM* decides the steps at runtime. Flexible, harder to control.
+Two words you'll see constantly, from Anthropic's [Building Effective
+Agents](https://www.anthropic.com/research/building-effective-agents):
 
-Most production "agents" are mostly workflows with a few agentic steps. Reliability lives on
-that spectrum.
+- A **workflow** is when you write the steps and the model fills in the blanks. Predictable.
+- An **agent** is when the model decides the steps at runtime. Flexible, harder to control.
+
+![A spectrum from workflow on the left to agent on the right, with most production agents sitting in the middle](vendor/img/workflow-spectrum.svg)
+
+Most things people call "agents" are mostly workflows with a couple of agentic steps. Where a
+system sits on that line is where its reliability lives.
 
 ## The schedule
 
-| When | Files | You'll be able to… |
-|------|-------|--------------------|
-| **Day 1** | `day1/01–03` | Explain LLMs/tools/the loop; hand-build a real agent |
-| **Day 2 AM** | `day2/04–06` | Use ReAct, reflection, and a real framework (Claude Agent SDK) |
-| **Day 2 PM** | `day2_ops/07–09` + Dockerfile | Trace, eval-as-CI, guardrail, and containerize an agent |
-| **Capstone** | `capstone/` | Ship one ops-flavored agent *with* tracing + an eval + Docker |
+| When | Files | What you can do after |
+|------|-------|------------------------|
+| Day 1 | `day1/01–03` | Explain LLMs, tools, and the loop; build an agent by hand |
+| Day 2, morning | `day2/04–06` | Use ReAct, reflection, and a real framework (the Claude Agent SDK) |
+| Day 2, afternoon | `day2_ops/07–09` + Dockerfile | Trace it, gate it with evals, guard it, and containerize it |
+| Capstone | `capstone/` | Ship one small agent with a trace, an eval, and a Dockerfile |
 
-Supporting docs: [glossary.md](glossary.md) (terms ↔ DevOps analogies),
-[resources.md](resources.md) (the canon), [CAREER.md](CAREER.md) (the pivot roadmap).
-Teaching this to someone? [WALKTHROUGH.md](WALKTHROUGH.md) is the facilitator guide.
+Other docs: the [glossary](glossary.md) maps LLM terms to ones you already use, [resources](resources.md)
+is the short reading list, and [CAREER.md](CAREER.md) is the path after the weekend. If
+you're teaching this to someone, [WALKTHROUGH.md](WALKTHROUGH.md) is the facilitator guide.
 
-## Why your DevOps background is the cheat code
+## Why this is a short jump for you
 
-| What employers struggle to find | What you already do |
-|---|---|
-| Agents that are observable in prod | APM, tracing, structured logging |
-| Catching regressions in a stochastic system | CI gates, test suites → **evals** |
-| Cost & latency under control | Resource budgeting, rate limiting |
-| Safe tool access, secrets, sandboxing | IAM, least-privilege, container isolation |
-| Reliable deploys & rollback of prompts/models | Versioning, blue/green, canaries |
+The hard problems in production agents are problems you've already solved once.
 
-You're not starting over. You're adding one new primitive to a toolkit you already have.
+| What teams struggle to find | What you already do |
+|------------------------------|---------------------|
+| Agents you can see into in prod | Tracing, structured logs, APM |
+| Catching regressions in a system that isn't deterministic | CI gates and test suites, which become **evals** |
+| Cost and latency under control | Budgets, rate limits, capacity planning |
+| Safe tool access and secrets | IAM, least privilege, sandboxing |
+| Rolling back a bad prompt or model | Versioning, blue/green, canaries |
+
+You're not starting over. You're learning one new primitive and pointing skills you already
+have at it.
