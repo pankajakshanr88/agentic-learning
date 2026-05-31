@@ -1,0 +1,7 @@
+# Day 1 + Day 2 core lessons need only these two:
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+
+# Day 2 framework lesson (day2/06_framework_agent.py) uses the Claude Agent SDK.
+# Uncomment when you reach that lesson:
+# claude-agent-sdk>=0.1.0

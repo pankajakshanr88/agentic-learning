@@ -1,0 +1,13 @@
+# Secrets — NEVER commit the real key
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Eval/trace artifacts (lessons may write these)
+*.jsonl
+
+# OS
+.DS_Store
