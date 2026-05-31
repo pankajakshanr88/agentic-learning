@@ -15,6 +15,11 @@ DevOps with the labels changed. You're closer to this job than almost anyone.
 2. Do [SETUP.md](SETUP.md) (5 min).
 3. Work the lessons in order. Each is a runnable file; the code is the lesson.
 
+> **Prefer one rich page?** Double-click **`index.html`** — a self-contained, offline
+> single-page version of this whole repo with a sidebar, search, syntax-highlighted lessons,
+> dark/light toggle, copy buttons, and a progress tracker that remembers what you've done.
+> (No internet needed; regenerate after editing any doc with `python build_site.py`.)
+
 ## The mental model (read before Day 1)
 
 **An LLM is a stateless function:** text in → text out. No memory, no actions, just
