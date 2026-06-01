@@ -156,10 +156,68 @@ USER appuser
 # Default: run the traced agent so a `docker run` shows structured output.
 CMD ["python", "day2_ops/07_tracing.py"]
 </script>
+<script type="text/plain" id="lesson-doc"># Containerizing the agent
+
+An agent ships like any other service, and this Dockerfile is deliberately boring — that's the
+point. The only agent-specific habits are how you handle the API key and that you run as a
+non-root user. Everything else is the same packaging you do every week.
+
+## Reading the Dockerfile
+
+Dependencies first, for layer caching — your usual Docker instinct applies unchanged.
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+```
+
+Then the two things worth calling out. Run as a non-root user — least privilege for the container,
+just like everywhere else. And note what we *don't* do: the API key is never baked into the
+image.
+
+```dockerfile
+RUN useradd --create-home appuser
+USER appuser
+
+CMD ["python", "day2_ops/07_tracing.py"]
+```
+
+The key comes in at runtime instead:
+
+```bash
+docker build -t weekend-agent -f day2_ops/Dockerfile .
+docker run --rm -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" weekend-agent
+```
+
+In production that `-e` becomes a secrets manager — Vault, a cloud secret store, a Kubernetes
+Secret — which is exactly what you already do for every other service's credentials.
+
+## What to watch for
+
+- Never bake the key into the image. Images get pushed to registries and shared; secrets passed at
+  runtime don't travel with them.
+- The default `CMD` runs the traced agent so a plain `docker run` shows you structured output. In a
+  real service you'd point it at your entrypoint.
+- An agent run can take minutes. For real workloads you wouldn't hold an HTTP connection open for
+  one — see the deploy-shapes notes in "Running in Production."
+
+## Recap
+
+- An agent containerizes like any service; most of this is your normal Dockerfile.
+- Pass the API key at runtime via env or a secrets manager, never in the image.
+- Run as non-root for least privilege.
+- The interesting operational questions (long runs, queues, scaling) live in the run notes, not the
+  Dockerfile.
+</script>
 <script src="../vendor/marked.min.js"></script>
 <script src="../vendor/hljs.min.js"></script>
 <script>
-const IT={"id":"ops-docker","label":"Dockerfile","group":"Day 2 \u2014 Ops","kind":"code","path":"day2_ops/Dockerfile","dir":"day2_ops","lang":"dockerfile"}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
+const IT={"id":"ops-docker","label":"Dockerfile","group":"Day 2 \u2014 Ops","kind":"code","path":"day2_ops/Dockerfile","dir":"day2_ops","lang":"dockerfile","lesson":true}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
 
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const LS_THEME="agentic.theme";
@@ -214,16 +272,28 @@ function addCopyButtons(scope=document){
     pre.appendChild(b);
   });
 }
-function renderCode(it, raw){
-  return '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>'+
-    '<details class="codewrap" open><summary>source</summary>'+
+function renderCode(it, raw, lessonMd){
+  var head, openAttr, summary;
+  if(lessonMd && window.marked){
+    head = marked.parse(lessonMd) + '<p class="code-path">Full source: <code>'+it.path+'</code></p>';
+    openAttr = '';                                   // collapsed: read first, expand to see code
+    summary = 'Show the full file';
+  } else {
+    head = '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>';
+    openAttr = ' open';
+    summary = 'source';
+  }
+  return head +
+    '<details class="codewrap"'+openAttr+'><summary>'+summary+'</summary>'+
     '<pre><code class="language-'+it.lang+'">'+esc(raw)+'</code></pre></details>';
 }
 
 if(window.marked) marked.setOptions({gfm:true});
 const sec=$("#thedoc");
 const raw=document.getElementById("src-doc").textContent;
-sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw);
+const lessonEl=document.getElementById("lesson-doc");
+const lessonMd=(lessonEl && lessonEl.textContent.trim())?lessonEl.textContent:null;
+sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw, lessonMd);
 fixLinks(sec, IT.dir, "page", BYBASE);
 if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
 addCopyButtons(); initTheme();

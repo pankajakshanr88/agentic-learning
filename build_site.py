@@ -50,9 +50,17 @@ for sid, label, group, kind, path, lang in SECTIONS:
     raw = (ROOT / path).read_text(encoding="utf-8")
     assert "</script" not in raw.lower(), f"{path} contains </script — would break embedding"
     embeds.append(f'<script type="text/plain" id="src-{sid}">{raw}</script>')
+    # A code section may have a prose walkthrough at lessons/<id>.md. If so, the site
+    # renders the walkthrough first and collapses the source beneath it.
+    lesson_path = ROOT / "lessons" / f"{sid}.md"
+    has_lesson = kind == "code" and lesson_path.exists()
+    if has_lesson:
+        lraw = lesson_path.read_text(encoding="utf-8")
+        assert "</script" not in lraw.lower(), f"{lesson_path} contains </script"
+        embeds.append(f'<script type="text/plain" id="lesson-{sid}">{lraw}</script>')
     manifest.append({"id": sid, "label": label, "group": group, "kind": kind,
                      "path": path, "dir": str(Path(path).parent).replace(".", ""),
-                     "lang": lang or "plaintext"})
+                     "lang": lang or "plaintext", "lesson": has_lesson})
 
 EMBEDS = "\n".join(embeds)
 MANIFEST = json.dumps(manifest, separators=(",", ":"))
@@ -228,9 +236,19 @@ function addCopyButtons(scope=document){
     pre.appendChild(b);
   });
 }
-function renderCode(it, raw){
-  return '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>'+
-    '<details class="codewrap" open><summary>source</summary>'+
+function renderCode(it, raw, lessonMd){
+  var head, openAttr, summary;
+  if(lessonMd && window.marked){
+    head = marked.parse(lessonMd) + '<p class="code-path">Full source: <code>'+it.path+'</code></p>';
+    openAttr = '';                                   // collapsed: read first, expand to see code
+    summary = 'Show the full file';
+  } else {
+    head = '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>';
+    openAttr = ' open';
+    summary = 'source';
+  }
+  return head +
+    '<details class="codewrap"'+openAttr+'><summary>'+summary+'</summary>'+
     '<pre><code class="language-'+it.lang+'">'+esc(raw)+'</code></pre></details>';
 }
 """
@@ -276,6 +294,7 @@ const MANIFEST=__MANIFEST__;
 __SHARED__
 const LS_PROG="agentic.progress";
 const raw=id=>{const e=document.getElementById("src-"+id);return e?e.textContent:"";};
+const lessonMd=id=>{const e=document.getElementById("lesson-"+id);return e?e.textContent:null;};
 const prog=()=>{try{return JSON.parse(localStorage.getItem(LS_PROG))||{}}catch(e){return{}}};
 const saveProg=p=>localStorage.setItem(LS_PROG,JSON.stringify(p));
 const byBase={}; MANIFEST.forEach(it=>byBase[it.path.split("/").pop()]=it.id);
@@ -285,7 +304,7 @@ function renderAll(){
   for(const it of MANIFEST){
     const sec=document.createElement("section"); sec.className="doc-section"; sec.id="sec-"+it.id;
     sec.innerHTML = it.kind==="md" ? (window.marked?marked.parse(raw(it.id)):"<pre>"+esc(raw(it.id))+"</pre>")
-                                   : renderCode(it, raw(it.id));
+                                   : renderCode(it, raw(it.id), lessonMd(it.id));
     fixLinks(sec, it.dir, "single", byBase);
     c.appendChild(sec);
   }
@@ -363,6 +382,7 @@ PAGE = r"""<!DOCTYPE html>
 </div>
 <button id="top-btn" title="Back to top">↑</button>
 <script type="text/plain" id="src-doc">__RAWDOC__</script>
+<script type="text/plain" id="lesson-doc">__LESSONDOC__</script>
 <script src="../vendor/marked.min.js"></script>
 <script src="../vendor/hljs.min.js"></script>
 <script>
@@ -371,7 +391,9 @@ __SHARED__
 if(window.marked) marked.setOptions({gfm:true});
 const sec=$("#thedoc");
 const raw=document.getElementById("src-doc").textContent;
-sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw);
+const lessonEl=document.getElementById("lesson-doc");
+const lessonMd=(lessonEl && lessonEl.textContent.trim())?lessonEl.textContent:null;
+sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw, lessonMd);
 fixLinks(sec, IT.dir, "page", BYBASE);
 if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
 addCopyButtons(); initTheme();
@@ -411,6 +433,9 @@ for it in manifest:
 
 for i, it in enumerate(manifest):
     raw = (ROOT / it["path"]).read_text(encoding="utf-8")
+    lesson_md = ""
+    if it.get("lesson"):
+        lesson_md = (ROOT / "lessons" / f'{it["id"]}.md').read_text(encoding="utf-8")
     prev_a = (f'<a href="{manifest[i-1]["id"]}.html"><span class="dir">← previous</span>{manifest[i-1]["label"]}</a>'
               if i > 0 else "<span></span>")
     next_a = (f'<a href="{manifest[i+1]["id"]}.html" style="text-align:right"><span class="dir">next →</span>{manifest[i+1]["label"]}</a>'
@@ -420,6 +445,7 @@ for i, it in enumerate(manifest):
             .replace("__CSS__", CSS).replace("__NAV__", nav_html)
             .replace("__PAGENAV__", prev_a + next_a)
             .replace("__RAWDOC__", raw)
+            .replace("__LESSONDOC__", lesson_md)
             .replace("__IT__", json.dumps(it, separators=(",", ":")))
             .replace("__BYBASE__", BYBASE_JSON).replace("__SHARED__", SHARED_JS))
     (pages_dir / f'{it["id"]}.html').write_text(page, encoding="utf-8")

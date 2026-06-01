@@ -210,10 +210,108 @@ if __name__ == "__main__":
 #    Notice the system prompt steers behavior without changing the user message.
 # 3. Lower max_tokens to 10 and watch the reply get cut off. Tokens = budget.
 </script>
+<script type="text/plain" id="lesson-doc"># 01 · Hello, LLM
+
+The first thing to unlearn: a language model doesn't remember anything. You send it text, it
+sends text back, and then it forgets you exist. Every API call starts from nothing. Once that
+clicks, a lot of "how do agents work?" stops being mysterious.
+
+By the end of this lesson you'll have called the model twice and proven to yourself that the
+second call has no idea the first one happened.
+
+## The one idea
+
+An LLM is a function: text in, text out. No memory between calls, no internet, no way to run
+code. It predicts the next chunk of text and stops. That's the whole thing.
+
+A conversation has three roles, and you'll see them everywhere:
+
+- `system` — standing instructions. Who the model is, the rules it follows.
+- `user` — what you say.
+- `assistant` — what the model says back.
+
+You pay per *token*, which is about ¾ of a word, counted on both what you send and what comes
+back. Keep an eye on that number; it's your bill.
+
+## Reading the code
+
+First we load the API key and fail early if it's missing. Nothing here is specific to AI —
+it's the same "check your config before you start" you'd write for any service.
+
+```python
+load_dotenv()  # reads .env -> environment
+
+if not os.getenv("ANTHROPIC_API_KEY"):
+    sys.exit("ANTHROPIC_API_KEY not set. Copy .env.example to .env and add your key (see SETUP.md).")
+
+from anthropic import Anthropic
+
+client = Anthropic()  # picks up ANTHROPIC_API_KEY from the environment
+MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+```
+
+Then one small helper that makes a single call. The important argument is `messages`: it's the
+*entire* conversation the model gets to see. Not "the latest thing you said" — everything.
+
+```python
+def ask(messages, system=None):
+    """One inference call. `messages` is the full conversation so far."""
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=system or "You are a concise, friendly tutor. Answer in one or two sentences.",
+        messages=messages,
+    )
+    text = resp.content[0].text
+    usage = resp.usage  # input_tokens / output_tokens — this is what you pay for
+    return text, usage
+```
+
+Now the part that proves the point. We make two calls. The first asks a question. The second
+asks "what did I just ask you?" — but we don't pass the first exchange along, so the model has
+nothing to go on.
+
+```python
+reply, usage = ask([{"role": "user", "content": "In one sentence, what is an LLM?"}])
+print("MODEL:", reply)
+print(f"[tokens] in={usage.input_tokens} out={usage.output_tokens}\n")
+
+# We DON'T send the previous turn, so the model has no idea what we asked before.
+reply2, _ = ask([{"role": "user", "content": "What did I just ask you?"}])
+print("MODEL (fresh call, no history):", reply2)
+```
+
+The second reply will be some version of "I don't know what you asked." That's not a bug. The
+model is stateless, and we didn't hand it the history.
+
+## What to watch for
+
+The big one: people assume the model "remembers" a conversation. It doesn't. When ChatGPT
+seems to remember your name, that's because the app is resending the whole transcript on every
+turn. Memory is the *caller's* job, not the model's. You'll build exactly that in the exercise.
+
+## Recap
+
+- The model is a stateless function: text in, text out, no memory.
+- `messages` is the full conversation you choose to show it.
+- You pay per token, both directions.
+- "Remembering" is something you implement by resending history.
+
+## Your turn
+
+1. Make it remember. Build a `history` list, append each user and assistant turn to it, and
+   pass the whole list to `ask()`. Now ask "what did I just ask you?" again — it works. You
+   just built short-term memory, and it's nothing more than resending the transcript.
+2. Change the `system` prompt to make the tutor answer like a grumpy sysadmin. Notice you
+   changed its behavior without touching the user message.
+3. Drop `max_tokens` to 10 and watch the reply get cut off mid-sentence. Tokens are a budget.
+
+Next: the model can't actually *do* anything yet. Lesson 02 gives it hands.
+</script>
 <script src="../vendor/marked.min.js"></script>
 <script src="../vendor/hljs.min.js"></script>
 <script>
-const IT={"id":"d1-01","label":"01 \u00b7 Hello, LLM","group":"Day 1","kind":"code","path":"day1/01_hello_llm.py","dir":"day1","lang":"python"}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
+const IT={"id":"d1-01","label":"01 \u00b7 Hello, LLM","group":"Day 1","kind":"code","path":"day1/01_hello_llm.py","dir":"day1","lang":"python","lesson":true}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
 
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const LS_THEME="agentic.theme";
@@ -268,16 +366,28 @@ function addCopyButtons(scope=document){
     pre.appendChild(b);
   });
 }
-function renderCode(it, raw){
-  return '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>'+
-    '<details class="codewrap" open><summary>source</summary>'+
+function renderCode(it, raw, lessonMd){
+  var head, openAttr, summary;
+  if(lessonMd && window.marked){
+    head = marked.parse(lessonMd) + '<p class="code-path">Full source: <code>'+it.path+'</code></p>';
+    openAttr = '';                                   // collapsed: read first, expand to see code
+    summary = 'Show the full file';
+  } else {
+    head = '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>';
+    openAttr = ' open';
+    summary = 'source';
+  }
+  return head +
+    '<details class="codewrap"'+openAttr+'><summary>'+summary+'</summary>'+
     '<pre><code class="language-'+it.lang+'">'+esc(raw)+'</code></pre></details>';
 }
 
 if(window.marked) marked.setOptions({gfm:true});
 const sec=$("#thedoc");
 const raw=document.getElementById("src-doc").textContent;
-sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw);
+const lessonEl=document.getElementById("lesson-doc");
+const lessonMd=(lessonEl && lessonEl.textContent.trim())?lessonEl.textContent:null;
+sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw, lessonMd);
 fixLinks(sec, IT.dir, "page", BYBASE);
 if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
 addCopyButtons(); initTheme();

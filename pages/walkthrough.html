@@ -224,10 +224,11 @@ Dockerfile. That set is her first portfolio piece and the thing that gets the in
 Walk her through CAREER.md. The message: the weekend gave her literacy, and her DevOps career
 already gave her the hard part. The move is shorter than she thinks.
 </script>
+<script type="text/plain" id="lesson-doc"></script>
 <script src="../vendor/marked.min.js"></script>
 <script src="../vendor/hljs.min.js"></script>
 <script>
-const IT={"id":"walkthrough","label":"Teaching Guide","group":"Guide","kind":"md","path":"WALKTHROUGH.md","dir":"","lang":"plaintext"}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
+const IT={"id":"walkthrough","label":"Teaching Guide","group":"Guide","kind":"md","path":"WALKTHROUGH.md","dir":"","lang":"plaintext","lesson":false}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
 
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const LS_THEME="agentic.theme";
@@ -282,16 +283,28 @@ function addCopyButtons(scope=document){
     pre.appendChild(b);
   });
 }
-function renderCode(it, raw){
-  return '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>'+
-    '<details class="codewrap" open><summary>source</summary>'+
+function renderCode(it, raw, lessonMd){
+  var head, openAttr, summary;
+  if(lessonMd && window.marked){
+    head = marked.parse(lessonMd) + '<p class="code-path">Full source: <code>'+it.path+'</code></p>';
+    openAttr = '';                                   // collapsed: read first, expand to see code
+    summary = 'Show the full file';
+  } else {
+    head = '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>';
+    openAttr = ' open';
+    summary = 'source';
+  }
+  return head +
+    '<details class="codewrap"'+openAttr+'><summary>'+summary+'</summary>'+
     '<pre><code class="language-'+it.lang+'">'+esc(raw)+'</code></pre></details>';
 }
 
 if(window.marked) marked.setOptions({gfm:true});
 const sec=$("#thedoc");
 const raw=document.getElementById("src-doc").textContent;
-sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw);
+const lessonEl=document.getElementById("lesson-doc");
+const lessonMd=(lessonEl && lessonEl.textContent.trim())?lessonEl.textContent:null;
+sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw, lessonMd);
 fixLinks(sec, IT.dir, "page", BYBASE);
 if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
 addCopyButtons(); initTheme();

@@ -233,10 +233,104 @@ if __name__ == "__main__":
 # 3. Replace self-critique with a CHECKLIST the critic must verify. Deterministic
 #    criteria beat vibes — and they're the seed of an eval (Lesson 08).
 </script>
+<script type="text/plain" id="lesson-doc"># 05 · Reflection: the agent grades its own work
+
+Here's a cheap trick that often buys real quality: after the model produces an answer, ask it
+(or another model) to critique that answer, then revise. It's the same move as a code review or
+a lint-then-fix loop. It also costs more tokens and more time, so part of this lesson is
+learning to see that trade-off, not just the upside.
+
+By the end you'll watch a first draft get scored, criticized, and rewritten — and you'll see
+the token bill for the privilege.
+
+## The one idea
+
+The pattern is called evaluator-optimizer:
+
+1. A generator produces an answer.
+2. An evaluator — the same model with a different prompt — scores it against criteria.
+3. If the score is too low, feed the critique back and regenerate. Repeat until it passes or you
+   hit a cap.
+
+More passes, higher quality, higher cost. Whether it's worth it is a measurement question, and
+lesson 08 is how you'd actually measure it.
+
+## Reading the code
+
+One helper wraps a call and keeps a running token total, because the cost is the point.
+
+```python
+total_tokens = 0
+
+def call(system, messages, max_tokens=600):
+    global total_tokens
+    resp = client.messages.create(model=MODEL, max_tokens=max_tokens, system=system, messages=messages)
+    total_tokens += resp.usage.input_tokens + resp.usage.output_tokens
+    return resp.content[0].text
+```
+
+The generator writes (or rewrites, if given feedback). The critic scores. Notice the critic is
+told to answer in a fixed format — `SCORE: <n>` on the first line — so we can parse a number out
+of it reliably.
+
+```python
+def critique(task, draft):
+    system = (
+        "You are a strict reviewer. Score the draft 1-10 for correctness, clarity, and "
+        "completeness. Reply EXACTLY as: 'SCORE: <n>' on the first line, then bullet feedback."
+    )
+    out = call(system, [{"role": "user", "content": f"TASK:\n{task}\n\nDRAFT:\n{draft}"}])
+    m = re.search(r"SCORE:\s*(\d+)", out)
+    score = int(m.group(1)) if m else 0
+    return score, out
+```
+
+The loop ties it together: draft, critique, and either pass or revise. The `threshold` is your
+quality bar; `max_rounds` stops it from polishing forever.
+
+```python
+def reflective_agent(task, threshold=8, max_rounds=3):
+    draft = generate(task)
+    for rnd in range(1, max_rounds + 1):
+        score, feedback = critique(task, draft)
+        if score >= threshold:
+            return draft
+        draft = generate(task, feedback)
+    return draft
+```
+
+At the end it prints the total tokens across every pass. That number is the price of reflection,
+and it's there on purpose so you feel it.
+
+## What to watch for
+
+- Reflection is not free. Each round is at least two extra model calls. On a hot path, that
+  latency and cost add up fast.
+- Forcing the critic into a fixed output format (`SCORE: n`) is what makes it parseable. Free-form
+  self-assessment is hard to act on programmatically.
+- A model grading itself is useful but not gospel. For anything that matters, deterministic
+  criteria beat a vibe score — which is the thread that leads straight into evals.
+
+## Recap
+
+- Reflection = generate, critique, revise, until good enough or capped.
+- It trades tokens and latency for quality; measure whether that trade is worth it.
+- Constrain the critic's output format so you can parse and act on it.
+- Self-critique is a stepping stone to real evals (lesson 08).
+
+## Your turn
+
+1. Set `threshold=10` (hard to hit) and watch it burn all its rounds and tokens. That's the
+   quality-versus-cost knob, made visible.
+2. Use a cheap model to generate and a strong one to judge. That split is a common cost
+   optimization.
+3. Replace the free-form critique with a checklist the critic must verify. Deterministic
+   criteria beat vibes — and they're the seed of an eval.
+</script>
 <script src="../vendor/marked.min.js"></script>
 <script src="../vendor/hljs.min.js"></script>
 <script>
-const IT={"id":"d2-05","label":"05 \u00b7 Reflection","group":"Day 2 \u2014 Patterns","kind":"code","path":"day2/05_reflection.py","dir":"day2","lang":"python"}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
+const IT={"id":"d2-05","label":"05 \u00b7 Reflection","group":"Day 2 \u2014 Patterns","kind":"code","path":"day2/05_reflection.py","dir":"day2","lang":"python","lesson":true}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
 
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const LS_THEME="agentic.theme";
@@ -291,16 +385,28 @@ function addCopyButtons(scope=document){
     pre.appendChild(b);
   });
 }
-function renderCode(it, raw){
-  return '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>'+
-    '<details class="codewrap" open><summary>source</summary>'+
+function renderCode(it, raw, lessonMd){
+  var head, openAttr, summary;
+  if(lessonMd && window.marked){
+    head = marked.parse(lessonMd) + '<p class="code-path">Full source: <code>'+it.path+'</code></p>';
+    openAttr = '';                                   // collapsed: read first, expand to see code
+    summary = 'Show the full file';
+  } else {
+    head = '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>';
+    openAttr = ' open';
+    summary = 'source';
+  }
+  return head +
+    '<details class="codewrap"'+openAttr+'><summary>'+summary+'</summary>'+
     '<pre><code class="language-'+it.lang+'">'+esc(raw)+'</code></pre></details>';
 }
 
 if(window.marked) marked.setOptions({gfm:true});
 const sec=$("#thedoc");
 const raw=document.getElementById("src-doc").textContent;
-sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw);
+const lessonEl=document.getElementById("lesson-doc");
+const lessonMd=(lessonEl && lessonEl.textContent.trim())?lessonEl.textContent:null;
+sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw, lessonMd);
 fixLinks(sec, IT.dir, "page", BYBASE);
 if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
 addCopyButtons(); initTheme();

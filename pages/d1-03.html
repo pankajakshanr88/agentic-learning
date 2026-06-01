@@ -250,10 +250,113 @@ if __name__ == "__main__":
 # 3. Add a print of the model's reasoning text (blocks where block.type == 'text')
 #    BEFORE the tool calls — that's the "thinking out loud" you'll formalize as ReAct.
 </script>
+<script type="text/plain" id="lesson-doc"># 03 · The agent loop
+
+This is the lesson where you build a real agent. Not a toy, not a wrapper around someone
+else's framework — about 40 lines that take a goal, decide what to do, use tools, and keep
+going until the job's done. Everything fancier you'll meet later (ReAct, reflection,
+multi-agent setups) is a variation on what you write here.
+
+By the end you'll have an agent that chains several tool calls on its own to finish a task you
+hand it.
+
+## The one idea
+
+Lesson 02 did one tool call. A task might need five. So you loop:
+
+```
+while not done:
+    ask the model
+    if it returned a final answer:  stop
+    otherwise (it called tools):    run them, feed the results back, loop again
+```
+
+That's it. The model drives; your code runs the tools and keeps the conversation going until
+the model stops asking for them.
+
+## Reading the code
+
+We give it two tools this time, so it actually has to choose and sometimes chain them.
+
+```python
+def run_tool(name, args):
+    if name == "calculator":
+        return eval(args["expression"], {"__builtins__": {}}, {})
+    if name == "word_count":
+        return len(args["text"].split())
+    return f"unknown tool: {name}"
+```
+
+Here's the loop itself. Read the exit condition first: if the model's `stop_reason` is
+anything other than `"tool_use"`, it's done talking and we return its answer.
+
+```python
+def agent(task: str, max_iterations: int = 6):
+    messages = [{"role": "user", "content": task}]
+
+    for step in range(1, max_iterations + 1):
+        resp = client.messages.create(model=MODEL, max_tokens=600, tools=TOOLS, messages=messages)
+
+        # Did it finish?
+        if resp.stop_reason != "tool_use":
+            return resp.content[0].text
+```
+
+If it isn't done, it asked for one or more tools. We run every request in this turn, print a
+line so we can watch it think, and collect the results.
+
+```python
+        messages.append({"role": "assistant", "content": resp.content})
+        tool_results = []
+        for block in resp.content:
+            if block.type == "tool_use":
+                out = run_tool(block.name, block.input)
+                print(f"  [step {step}] {block.name}({block.input}) -> {out}")
+                tool_results.append(
+                    {"type": "tool_result", "tool_use_id": block.id, "content": str(out)}
+                )
+        messages.append({"role": "user", "content": tool_results})
+
+    return "(stopped: hit max_iterations — the agent didn't converge)"
+```
+
+Then the `for` loop sends everything back and the model takes its next step. Notice the
+conversation just keeps growing: request, result, request, result, until the model has what it
+needs and writes the answer.
+
+Two details worth pausing on. First, we handle *all* the tool blocks in a turn, not just the
+first — the model can ask for several at once. Second, that `max_iterations` cap. Without it, a
+confused model could loop forever, and you'd watch your token bill climb with it. Right now
+it's a humble `for` range. In lesson 09 it becomes a real guardrail.
+
+## What to watch for
+
+- The loop ends when the model stops asking for tools, not after a fixed number of steps. The
+  cap is a safety net, not the plan.
+- Watch the printed steps. When the agent does something dumb, this trace is the only way to
+  see why — which is the seed of the observability work on Day 2.
+- The whole conversation is resent every iteration. That's the stateless model from lesson 01
+  showing up again: you carry the memory, so it grows each turn (and so does the token cost).
+
+## Recap
+
+- An agent is a loop around tool use: ask, run tools, feed back, repeat.
+- It stops when the model returns a final answer instead of a tool request.
+- Always cap the iterations so a stuck agent can't run away.
+- You've now written a genuine agent. The rest of the course makes it better and safer.
+
+## Your turn
+
+1. Add a `reverse_string(text)` tool and give it a three-step task. Watch it chain all three.
+2. Set `max_iterations=1` and give it a two-step task. See it fail to converge — that's why
+   the cap (and the trace) matter.
+3. Print the model's reasoning by also showing blocks where `block.type == "text"`, before the
+   tool calls. That "thinking out loud" is exactly what lesson 04 formalizes as ReAct.
+</script>
 <script src="../vendor/marked.min.js"></script>
 <script src="../vendor/hljs.min.js"></script>
 <script>
-const IT={"id":"d1-03","label":"03 \u00b7 The Agent Loop","group":"Day 1","kind":"code","path":"day1/03_agent_loop.py","dir":"day1","lang":"python"}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
+const IT={"id":"d1-03","label":"03 \u00b7 The Agent Loop","group":"Day 1","kind":"code","path":"day1/03_agent_loop.py","dir":"day1","lang":"python","lesson":true}, BYBASE={"README.md":"capstone","SETUP.md":"setup","WALKTHROUGH.md":"walkthrough","01_hello_llm.py":"d1-01","02_first_tool.py":"d1-02","03_agent_loop.py":"d1-03","04_react_agent.py":"d2-04","05_reflection.py":"d2-05","06_framework_agent.py":"d2-06","07_tracing.py":"ops-07","08_eval_harness.py":"ops-08","09_guardrails.py":"ops-09","Dockerfile":"ops-docker","run.md":"ops-run","glossary.md":"glossary","resources.md":"resources","CAREER.md":"career","STYLE.md":"style"};
 
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const LS_THEME="agentic.theme";
@@ -308,16 +411,28 @@ function addCopyButtons(scope=document){
     pre.appendChild(b);
   });
 }
-function renderCode(it, raw){
-  return '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>'+
-    '<details class="codewrap" open><summary>source</summary>'+
+function renderCode(it, raw, lessonMd){
+  var head, openAttr, summary;
+  if(lessonMd && window.marked){
+    head = marked.parse(lessonMd) + '<p class="code-path">Full source: <code>'+it.path+'</code></p>';
+    openAttr = '';                                   // collapsed: read first, expand to see code
+    summary = 'Show the full file';
+  } else {
+    head = '<h1>'+it.label+'</h1><p class="code-path"><code>'+it.path+'</code></p>';
+    openAttr = ' open';
+    summary = 'source';
+  }
+  return head +
+    '<details class="codewrap"'+openAttr+'><summary>'+summary+'</summary>'+
     '<pre><code class="language-'+it.lang+'">'+esc(raw)+'</code></pre></details>';
 }
 
 if(window.marked) marked.setOptions({gfm:true});
 const sec=$("#thedoc");
 const raw=document.getElementById("src-doc").textContent;
-sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw);
+const lessonEl=document.getElementById("lesson-doc");
+const lessonMd=(lessonEl && lessonEl.textContent.trim())?lessonEl.textContent:null;
+sec.innerHTML = IT.kind==="md" ? (window.marked?marked.parse(raw):"<pre>"+esc(raw)+"</pre>") : renderCode(IT, raw, lessonMd);
 fixLinks(sec, IT.dir, "page", BYBASE);
 if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
 addCopyButtons(); initTheme();
