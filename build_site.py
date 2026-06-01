@@ -277,6 +277,7 @@ SINGLE_PAGE = r"""<!DOCTYPE html>
               stroke-dasharray="75.4" stroke-dashoffset="75.4"></circle>
     </svg><span class="pct" id="ring-pct">0%</span>
   </div>
+  <a class="iconbtn" href="prompts.html" title="Prompt-first track (Cursor/Windsurf)">⌘ Prompt track</a>
   <button class="iconbtn" id="reset-btn" title="Reset progress">Reset</button>
   <button class="iconbtn" id="theme-btn" title="Toggle theme">🌙</button>
 </header>
@@ -450,5 +451,148 @@ for i, it in enumerate(manifest):
             .replace("__BYBASE__", BYBASE_JSON).replace("__SHARED__", SHARED_JS))
     (pages_dir / f'{it["id"]}.html').write_text(page, encoding="utf-8")
 
-print(f"Wrote index.html ({len(single):,} bytes) + {len(manifest)} pages/ "
-      f"(libs inlined in index; shared in pages; images + diagrams rendered).")
+# =========================================================================
+# prompts.html — the prompt-first track (Cursor/Windsurf), self-contained.
+# Leads with the prompt to paste; each lesson cross-links to its code deep-dive.
+# =========================================================================
+PROMPT_SECTIONS = [
+    ("p-intro", "Why this track",          "Start"),
+    ("p-01",    "01 · Hello, LLM",         "Day 1"),
+    ("p-02",    "02 · First Tool",         "Day 1"),
+    ("p-03",    "03 · The Agent Loop",     "Day 1"),
+    ("p-04",    "04 · ReAct",              "Day 2 — Patterns"),
+    ("p-05",    "05 · Reflection",         "Day 2 — Patterns"),
+    ("p-06",    "06 · Framework vs. hand", "Day 2 — Patterns"),
+    ("p-07",    "07 · Tracing",            "Day 2 — Ops"),
+    ("p-08",    "08 · Evals",              "Day 2 — Ops"),
+    ("p-09",    "09 · Guardrails",         "Day 2 — Ops"),
+    ("p-ship",  "Ship it",                 "Day 2 — Ops"),
+]
+# file on disk for the intro is intro.md; the rest match their id.
+PROMPT_FILES = {"p-intro": "intro.md"}
+
+p_manifest, p_embeds = [], []
+for pid, label, group in PROMPT_SECTIONS:
+    fname = PROMPT_FILES.get(pid, f"{pid}.md")
+    praw = (ROOT / "prompt_track" / fname).read_text(encoding="utf-8")
+    assert "</script" not in praw.lower(), f"prompt_track/{fname} contains </script"
+    p_embeds.append(f'<script type="text/plain" id="psrc-{pid}">{praw}</script>')
+    p_manifest.append({"id": pid, "label": label, "group": group})
+
+# Extra CSS just for prompt blocks: make the first code block in each section
+# (the prompt to paste) visually pop, with an always-visible copy button.
+PROMPT_CSS = CSS + r"""
+.doc-section blockquote{border-left-width:4px}
+.promptbar{display:flex;align-items:center;gap:10px;margin:1.6em 0 .2em}
+.promptbar .tag{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
+  border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:999px;padding:3px 10px}
+.promptbar .hint{color:var(--muted);font-size:12.5px}
+/* a "paste this" blockquote: the prompt itself, styled as a card with a copy button */
+.doc-section blockquote.prompt{background:var(--panel-2);border-left:4px solid var(--accent);
+  position:relative;padding:1em 1.1em;border-radius:8px}
+.doc-section blockquote.prompt .copy-btn{opacity:1;top:8px;right:8px}
+"""
+
+PROMPTS_PAGE = (SINGLE_PAGE
+    .replace("Agentic Engineering — Weekend Intensive", "Prompt Track — Agentic Engineering")
+    .replace("<span>Agentic Engineering</span>", '<a href="index.html" style="color:inherit;text-decoration:none">Agentic Engineering</a>')
+    .replace("· a weekend", "· prompt track")
+    .replace('<a class="iconbtn" href="prompts.html" title="Prompt-first track (Cursor/Windsurf)">⌘ Prompt track</a>',
+             '<a class="iconbtn" href="index.html" title="Code track">&lt;/&gt; Code track</a>')
+    .replace("placeholder=\"Filter sections…\"", "placeholder=\"Filter lessons…\"")
+    .replace("__HLJS_DARK__", HLJS_DARK).replace("__HLJS_LIGHT__", HLJS_LIGHT)
+    .replace("__CSS__", PROMPT_CSS)
+    .replace("__EMBEDS__", "\n".join(p_embeds))
+    .replace("__MARKED__", MARKED_JS).replace("__HLJS__", HLJS_JS)
+    .replace("__MANIFEST__", json.dumps(p_manifest, separators=(",", ":")))
+    .replace("__SHARED__", SHARED_JS))
+
+# Swap the single-page render script for a prompt-track one: render markdown,
+# tag the first blockquote in each lesson as the "prompt to paste," add copy buttons.
+PROMPT_RENDER = r"""
+const LS_PROG="agentic.promptprog";
+const raw=id=>{const e=document.getElementById("psrc-"+id);return e?e.textContent:"";};
+const prog=()=>{try{return JSON.parse(localStorage.getItem(LS_PROG))||{}}catch(e){return{}}};
+const saveProg=p=>localStorage.setItem(LS_PROG,JSON.stringify(p));
+if(window.marked) marked.setOptions({gfm:true});
+function tagPrompt(sec){
+  // The first blockquote under the "Drive" idea is the prompt to paste.
+  const bq=sec.querySelector("blockquote");
+  if(bq){ bq.classList.add("prompt");
+    const b=document.createElement("button"); b.className="copy-btn"; b.textContent="Copy prompt";
+    b.addEventListener("click",()=>{navigator.clipboard.writeText(bq.innerText);
+      b.textContent="Copied!"; b.classList.add("done"); setTimeout(()=>{b.textContent="Copy prompt";b.classList.remove("done")},1500);});
+    bq.appendChild(b);
+  }
+}
+function renderAll(){
+  const c=$("#content");
+  for(const it of MANIFEST){
+    const sec=document.createElement("section"); sec.className="doc-section"; sec.id="sec-"+it.id;
+    sec.innerHTML = window.marked?marked.parse(raw(it.id)):"<pre>"+esc(raw(it.id))+"</pre>";
+    // Fix links: prompts.html lives at repo root, so the lesson markdown's "../pages/"
+    // becomes "pages/", and "p-NN.html" next-links become in-page anchors.
+    $$("a",sec).forEach(a=>{let h=a.getAttribute("href")||"";
+      if(/^https?:/.test(h)){a.target="_blank";a.rel="noopener";return;}
+      if(h.startsWith("../pages/")){a.setAttribute("href", h.replace("../pages/","pages/"));return;}
+      const m=h.match(/^(p-[a-z0-9]+)\.html$/); if(m){a.setAttribute("href","#sec-"+m[1]);}});
+    tagPrompt(sec);
+    c.appendChild(sec);
+  }
+  if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e){}});
+  addCopyButtons();
+}
+function buildNav(){
+  const list=$("#navlist"); const p=prog(); let group="";
+  for(const it of MANIFEST){
+    if(it.group!==group){group=it.group;const g=document.createElement("div");g.className="navgroup";g.textContent=group;list.appendChild(g);}
+    const a=document.createElement("a"); a.className="navlink"; a.href="#sec-"+it.id; a.dataset.id=it.id;
+    a.innerHTML='<input class="chk" type="checkbox"'+(p[it.id]?" checked":"")+'><span class="lbl">'+it.label+'</span>';
+    const chk=a.querySelector(".chk");
+    chk.addEventListener("click",e=>e.stopPropagation());
+    chk.addEventListener("change",()=>{const pp=prog();pp[it.id]=chk.checked;saveProg(pp);updateRing();});
+    a.addEventListener("click",()=>{if(window.innerWidth<=920)document.body.classList.remove("nav-open");});
+    list.appendChild(a);
+  }
+}
+function updateRing(){
+  const p=prog(); const done=MANIFEST.filter(it=>p[it.id]).length, total=MANIFEST.length, C=2*Math.PI*12;
+  $("#ring-fg").style.strokeDashoffset=C*(1-done/total); $("#ring-pct").textContent=Math.round(done/total*100)+"%";
+}
+function spy(){
+  const links=new Map($$(".navlink").map(a=>[a.dataset.id,a]));
+  const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){
+    links.forEach(a=>a.classList.remove("active"));
+    const a=links.get(e.target.id.replace("sec-","")); if(a){a.classList.add("active");a.scrollIntoView({block:"nearest"});}
+  }});},{rootMargin:"-64px 0px -70% 0px",threshold:0});
+  $$(".doc-section").forEach(s=>obs.observe(s));
+}
+function chrome(){
+  const bar=$("#progress-top"), top=$("#top-btn");
+  addEventListener("scroll",()=>{const h=document.documentElement,max=h.scrollHeight-h.clientHeight;
+    bar.style.width=(max>0?h.scrollTop/max*100:0)+"%"; top.classList.toggle("show",h.scrollTop>600);});
+  top.addEventListener("click",()=>scrollTo({top:0,behavior:"smooth"}));
+  $("#menu-btn").addEventListener("click",()=>document.body.classList.toggle("nav-open"));
+  $("#scrim").addEventListener("click",()=>document.body.classList.remove("nav-open"));
+  $("#search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();
+    $$(".navlink").forEach(a=>a.style.display=a.textContent.toLowerCase().includes(q)?"":"none");});
+  $("#reset-btn").addEventListener("click",()=>{if(confirm("Reset your progress checkmarks?")){
+    localStorage.removeItem(LS_PROG);$$(".chk").forEach(c=>c.checked=false);updateRing();}});
+}
+renderAll(); buildNav(); updateRing(); spy(); initTheme(); chrome();
+"""
+
+# Replace the index page's render script body with the prompt-track body.
+# The single-page template's script starts at "const MANIFEST=" and we keep that line.
+_marker = "const MANIFEST=" + json.dumps(p_manifest, separators=(",", ":")) + ";"
+_after_shared = _marker + "\n" + SHARED_JS
+assert _after_shared in PROMPTS_PAGE, "prompt page manifest/shared marker not found"
+# everything after SHARED_JS in the original single-page script is the index render logic;
+# cut from the end of SHARED_JS to just before the closing </script> and swap in PROMPT_RENDER.
+_start = PROMPTS_PAGE.index(_after_shared) + len(_after_shared)
+_end = PROMPTS_PAGE.index("</script>\n</body>", _start)
+PROMPTS_PAGE = PROMPTS_PAGE[:_start] + "\n" + PROMPT_RENDER + "\n" + PROMPTS_PAGE[_end:]
+(ROOT / "prompts.html").write_text(PROMPTS_PAGE, encoding="utf-8")
+
+print(f"Wrote index.html ({len(single):,} bytes) + prompts.html ({len(PROMPTS_PAGE):,} bytes) "
+      f"+ {len(manifest)} pages/ (libs inlined; images + diagrams rendered).")
