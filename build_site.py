@@ -377,9 +377,9 @@ if(window.hljs) $$("pre code").forEach(b=>{try{hljs.highlightElement(b)}catch(e)
 addCopyButtons(); initTheme();
 $("#menu-btn").addEventListener("click",()=>document.body.classList.toggle("nav-open"));
 $("#scrim").addEventListener("click",()=>document.body.classList.remove("nav-open"));
-const top=$("#top-btn");
-addEventListener("scroll",()=>top.classList.toggle("show",document.documentElement.scrollTop>600));
-top.addEventListener("click",()=>scrollTo({top:0,behavior:"smooth"}));
+const topBtn=$("#top-btn");
+addEventListener("scroll",()=>topBtn.classList.toggle("show",document.documentElement.scrollTop>600));
+topBtn.addEventListener("click",()=>scrollTo({top:0,behavior:"smooth"}));
 </script>
 </body>
 </html>
