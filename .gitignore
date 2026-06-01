@@ -12,3 +12,6 @@ __pycache__/
 # OS
 .DS_Store
 .gstack/
+
+# debug scratch
+write_test.txt
